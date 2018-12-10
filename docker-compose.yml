@@ -1,0 +1,61 @@
+version: '3.5'
+
+services:
+
+  gitlab:
+    image: gitlab/gitlab-ce:latest
+    restart: always
+    environment:
+      GITLAB_OMNIBUS_CONFIG: "\
+        external_url 'http://${GITLAB_HOST}' \n\
+        registry_external_url 'http://${GITLAB_REGISTRY_HOST}' \n\
+        pages_external_url 'http://${GITLAB_PAGES_HOST}' \n\
+        gitlab_rails['initial_root_password'] = 'passw0rd' \n\
+        gitlab_rails['initial_shared_runners_registration_token'] = 'initial-t0ken' \
+        "
+    ports:
+      - 80:80
+    volumes:
+      - ./gitlab/config:/etc/gitlab
+      - ./gitlab/logs:/var/log/gitlab
+      - ./gitlab/data:/var/opt/gitlab
+    networks:
+      default:
+        aliases:
+          - "${GITLAB_HOST}"
+          - "${GITLAB_REGISTRY_HOST}"
+          - "${GITLAB_PAGES_HOST}"
+
+  gitlab-runner:
+    image: gitlab/gitlab-runner:alpine
+    restart: always
+    volumes:
+      - ./gitlab-runner/config:/etc/gitlab-runner
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - gitlab
+
+  register-gitlab-runner:
+    image: gitlab/gitlab-runner:alpine
+    volumes:
+      - ./gitlab-runner/config:/etc/gitlab-runner
+    command:
+      - register
+      - --non-interactive
+      - --locked=false
+      - --run-untagged
+      - --name=Docker-in-Docker Runnner
+      - --tag-list "docker,dind"
+      - --executor=docker
+      - --docker-image=docker:18.03.0-ce-dind
+      - --docker-volumes=/var/run/docker.sock:/var/run/docker.sock
+      - --docker-network-mode=gitlab-default
+    environment:
+      - "CI_SERVER_URL=http://${GITLAB_HOST}"
+      - "REGISTRATION_TOKEN=initial-t0ken"
+    depends_on:
+      - gitlab
+
+networks:
+  default:
+    name: gitlab-default
