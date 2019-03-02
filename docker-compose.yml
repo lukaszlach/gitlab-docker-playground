@@ -9,7 +9,6 @@ services:
       GITLAB_OMNIBUS_CONFIG: "\
         external_url 'http://${GITLAB_HOST}' \n\
         registry_external_url 'http://${GITLAB_REGISTRY_HOST}' \n\
-        pages_external_url 'http://${GITLAB_PAGES_HOST}' \n\
         gitlab_rails['initial_root_password'] = 'passw0rd' \n\
         gitlab_rails['initial_shared_runners_registration_token'] = 'initial-t0ken' \
         "
